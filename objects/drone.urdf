@@ -130,13 +130,13 @@
     <parent link="base_link"/>
     <child link="BL"/>
     <axis xyz="0 0 1"/>
-    <origin xyz="-0.09 0.13 0" rpy="0 0 0"/>
+    <origin xyz="-0.16 0.13 0" rpy="0 0 0"/>
   </joint>
   <joint name="base_to_BR" type="fixed">
     <parent link="base_link"/>
     <child link="BR"/>
     <axis xyz="0 0 1"/>
-    <origin xyz="-0.09 -0.13 0" rpy="0 0 0"/>
+    <origin xyz="-0.16 -0.13 0" rpy="0 0 0"/>
   </joint>
 
 
