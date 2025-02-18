@@ -4,24 +4,25 @@ import pybullet_data
 import time
 import numpy as np
 
-class EnvSimpleLine(gym.Env):
+class EnvSimpleReturn(gym.Env):
     def __init__(self):
         super().__init__()
 
         # Setup PyBullet
         self.g_force = 10
-        self.physicsClient = p.connect(p.GUI)  # or p.DIRECT for non-graphical version
+        self.physicsClient = p.connect(p.GUI)  # or p.DIRECT for non-graphical version # p.GUI
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -self.g_force)  # Gravity along x, y, z
 
         # Load objects
         self.plane_id = p.loadURDF("plane.urdf", globalScaling=10)
-        self.drone_id = p.loadURDF("objects/drone.urdf", basePosition=[0, 4, 1])
+        self.drone_id = p.loadURDF("res/drone.urdf", basePosition=[0, 1, 0.8])
         self.drone_initial_pos, self.drone_initial_ori = p.getBasePositionAndOrientation(self.drone_id)
 
         # Target positions of the cubes to calculate distance between drone and cube
         self.target_a, self.target_b = self.create_checkpoints()
         self.current_target = self.target_b  # Fly to B first
+        self.reached_target_b = False
 
         # Get prameters for step
         # Weigh drone and write correct mass in drone.urdf
@@ -38,7 +39,10 @@ class EnvSimpleLine(gym.Env):
 
         # Action space
         self.action_space = gym.spaces.Discrete(6) # Up, Down, Left, Right, Forward, Backward
-        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32)
+        self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0]), high=np.array([100, 100, 10]), dtype=np.float32)
+
+        # Reward
+        self.previous_distance = abs(self.target_a[1] - self.target_b[1])
 
     def create_checkpoints(self):
         """ Creates two checkpoint cubes. """
@@ -54,7 +58,7 @@ class EnvSimpleLine(gym.Env):
         obj_id_b = p.createMultiBody(
             baseMass=cube_mass,
             baseCollisionShapeIndex=col_shape_id,
-            basePosition=[0, 30, 0.25]
+            basePosition=[0, 12, 0.25]
         )
 
         pos_a, _ = p.getBasePositionAndOrientation(obj_id_a)
@@ -70,17 +74,17 @@ class EnvSimpleLine(gym.Env):
 
         # Define actions
         if action == 0: # Up
-            z_scaler = 5.5
+            z_scaler = 20.5
         elif action == 1: # Right
-            x_scaler = 5.5
+            x_scaler = 20.5
         elif action == 2: # Down
-            z_scaler = -5.5
+            z_scaler = -10.5
         elif action == 3: # Left
-            x_scaler = -5.5
+            x_scaler = -20.5
         elif action == 4: # Forward
-            y_scaler = 5.5
+            y_scaler = 20.5
         elif action == 5: # Backward
-            y_scaler = -5.5
+            y_scaler = -20.5
         else:
             raise ValueError(f"Action not in range(6) '{action}'")
 
@@ -101,7 +105,7 @@ class EnvSimpleLine(gym.Env):
         obs = self.get_observation() # x, y, z -> Drone position
         reward, done, terminated, truncated = self.calc_reward()
 
-        return obs, reward, done, terminated, truncated, {}
+        return obs, reward, terminated, truncated, {}
 
     def reset(self, seed: int =42):
         np.random.seed(seed=seed)
@@ -112,7 +116,8 @@ class EnvSimpleLine(gym.Env):
         )
 
         self.current_target = self.target_b
-        return self.get_observation()
+        self.reached_target_b = False
+        return self.get_observation(), {}
 
     def calc_reward(self):
         reward = 0
@@ -124,24 +129,44 @@ class EnvSimpleLine(gym.Env):
         pos, _ = p.getBasePositionAndOrientation(self.drone_id)
         distance = np.linalg.norm(np.array(pos) - self.current_target)
 
-        # Negative distance so it tries to get closer
-        reward -= distance
+        #Reward for getting closer
+        prev_distance = self.previous_distance
+        if distance < prev_distance:
+            # reward += abs(distance) ** 2
+            reward += 1
+        else:
+            # reward -= abs(distance) ** 2
+            reward -= 1
+
+        self.previous_distance = distance
 
         # Bonus for staying in a specific hight
-        if pos[2] > 0.5 and pos[2] < 10:
-            reward + 5
-
-        if pos[2] < 0.2: #Crash
-            reward - 100
+        if pos[2] > 2: # Crash
+            reward -= 100
             done = True
             truncated = True
 
-        # Bonus for reaching target
-        if distance < 0.5:
-            reward + 100
+        if pos[2] < 0.2: #Crash
+            reward -= 100
             done = True
-            terminated = True
+            truncated = True
 
+        # Reward for reaching b 
+        # TODO: After reaching B -> Set reward to 0 so it doesnt stay on B
+        if distance < 1:
+            if self.reached_target_b:
+                # Reward for reaching b and then return to a
+                print("DONE!")
+                reward += 200
+                done = True
+                terminated = True
+            else:
+                # Reward for reaching b
+                print("Reached target B")
+                self.reached_target_b = True
+                self.current_target = self.target_a
+                reward += 200
+            
         return reward, done, terminated, truncated
 
     def get_observation(self):
@@ -152,40 +177,7 @@ class EnvSimpleLine(gym.Env):
     def step_simulation(self, steps=1000):
         """ Run the simulation for a given number of steps while stabilizing the drone. """
         for _ in range(steps):
-            self.step(4)
+            self.step(5)
 
 if __name__ == "__main__":
-    from stable_baselines3 import PPO
-
-    env = EnvSimpleLine()
-    # env.step_simulation(10000) # Only for debugging
-
-    # Create PPO model
-    model = PPO("MlpPolicy", env, verbose=1)
-
-    # Training loop with episode tracking
-    num_episodes = 0
-    total_timesteps = 4_000_000
-    timesteps_per_episode = 40_000
-
-    for timestep in range(0, total_timesteps, timesteps_per_episode):
-        # Track episode count manually
-        num_episodes += 1
-        print(f"Episode {num_episodes} started")
-        
-        # Reset the environment to start a new episode
-        obs = env.reset()
-
-        # Train for this episode
-        done = False
-        episode_timesteps = 0
-
-        while not done and episode_timesteps < timesteps_per_episode:
-            action, _states = model.predict(obs)
-            obs, reward, done, terminated, truncated, _ = env.step(action)
-            episode_timesteps += 1
-        print(f"Episode {num_episodes} completed")
-
-    model.save("drone_rl_final")
-
-
+    env = EnvSimpleReturn()
