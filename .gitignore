@@ -174,3 +174,5 @@ cython_debug/
 drone_simple_line.zip
 
 venv*
+*_logs
+*.zip

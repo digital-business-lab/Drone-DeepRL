@@ -1,3 +1,8 @@
+""" 
+This file holds a environment called EnvSimpleLine. The agent
+simply has to reach target B and gets a reward for that.
+"""
+
 import gymnasium as gym
 import pybullet as p
 import pybullet_data
@@ -38,7 +43,11 @@ class EnvSimpleLine(gym.Env):
 
         # Action space
         self.action_space = gym.spaces.Discrete(6) # Up, Down, Left, Right, Forward, Backward
-        self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0]), high=np.array([100, 100, 10]), dtype=np.float32)
+        self.observation_space = gym.spaces.Box(
+            low=np.array([-100, -100, 0, -100]),            # x, y, z, distance (all set to 0 initially)
+            high=np.array([100, 100, 10, 100]),    # x, y, z, max distance to target
+            dtype=np.float32
+        )
 
         # Reward
         self.previous_distance = abs(self.target_a[1] - self.target_b[1])
@@ -160,7 +169,10 @@ class EnvSimpleLine(gym.Env):
 
     def get_observation(self):
         pos, _ = p.getBasePositionAndOrientation(self.drone_id)
-        return np.array([pos[0], pos[1], pos[2]], dtype=np.float32)
+
+        # Include distance to target into obeservation
+        distance = np.linalg.norm(np.array(pos) - self.current_target)
+        return np.array([pos[0], pos[1], pos[2], distance], dtype=np.float32)
 
     # Only for debugging
     def step_simulation(self, steps=1000):

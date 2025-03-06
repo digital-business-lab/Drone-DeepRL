@@ -12,27 +12,29 @@ class PPO_Algorithm:
             self.model = PPO.load(
                 model, 
                 env=self.env, 
-                gamma=0.99, 
-                learning_rate=0.001, 
-                clip_range=0.2,
-                n_batch=2048, 
-                n_epochs=10, 
-                ent_coef=0.01, 
+                gamma=0.98, 
+                learning_rate=0.0003, 
+                clip_range=0.2, # Exploration noise
+                n_batch=256, # Smoother policy updates 
+                n_epochs=15, 
+                ent_coef=0.01, # Reduce exploration 
                 vf_coef=0.5, 
-                max_grad_norm=0.5
+                max_grad_norm=0.5,
+                tensorboard_log="./models/ppo_logs/"
             )
         else:
             self.model = PPO(
-                "MlpPolicy", 
+                policy="MlpPolicy", 
                 env=self.env, 
                 gamma=0.99, 
                 learning_rate=0.001, 
                 clip_range=0.2,
-                batch_size=2048, 
+                batch_size=64, 
                 n_epochs=10, 
                 ent_coef=0.01, 
                 vf_coef=0.5, 
-                max_grad_norm=0.5
+                max_grad_norm=0.5,
+                tensorboard_log="./models/ppo_logs/"
             )
         self.timesteps = timesteps
 
@@ -64,7 +66,8 @@ class DQN_Algorithm:
                 exploration_final_eps=0.02,
                 train_freq=4,
                 batch_size=32,
-                verbose=1  # Optional: Set to 1 for logging output
+                verbose=0,  # Optional: Set to 1 for logging output
+                tensorboard_log="./models/dqn_logs/"
             )
         else:
             self.model = DQN(
@@ -78,13 +81,14 @@ class DQN_Algorithm:
                 exploration_final_eps=0.02,
                 train_freq=4,
                 batch_size=32,
-                verbose=1  # Optional: Set to 1 for logging output
+                verbose=0,
+                tensorboard_log="./models/dqn_logs/"
             )
         self.timesteps = timesteps
 
     def train(self, model_name: str):
         self.model.learn(total_timesteps=self.timesteps)
-        self.model.save(f"./models/RainbowDQN_{model_name}")
+        self.model.save(f"./models/DQN_{model_name}")
     
     def test(self, epochs: int):
         for episode in range(epochs):
@@ -96,15 +100,16 @@ class DQN_Algorithm:
 
 
 if __name__ == "__main__":
-    # algorithm = PPO_Algorithm(
-    #     env=EnvSimpleLine,
-    #     model="models/PPO_EnvSimpleLine_400k",
-    #     timesteps=400_000
-    #     )
-    # algorithm.test(epochs=10)
-
-    algorithm = DQN_Algorithm(
+    algorithm = PPO_Algorithm(
         env=EnvSimpleReturn,
-        timesteps=400_000
-    )
-    algorithm.train(model_name="EnvSimpleReturn_400k")
+        model="models/PPO_EnvSimpleReturn_2M-v2",
+        timesteps=2_000_000
+        )
+    algorithm.train(model_name="EnvSimpleReturn_4M")
+    #algorithm.test(epochs=10)
+
+    # algorithm = DQN_Algorithm(
+    #     env=EnvSimpleLine,
+    #     timesteps=200_000
+    # )
+    # algorithm.train(model_name="EnvSimpleLine_200k")
