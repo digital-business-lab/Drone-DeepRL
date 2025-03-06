@@ -149,9 +149,9 @@ class EnvRandomReturn(gym.Env):
             self.drone_initial_ori
         )
 
-        p.removeBody(self.obj_id_a)
-        p.removeBody(self.obj_id_b)
-        self.target_a, self.target_b = self.create_checkpoints()
+        # p.removeBody(self.obj_id_a)
+        # p.removeBody(self.obj_id_b)
+        # self.target_a, self.target_b = self.create_checkpoints()
         self.current_target = self.target_b
         self.reached_target_b = False
         self.reward_target_b = 200
