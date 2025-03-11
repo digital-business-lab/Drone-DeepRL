@@ -78,8 +78,8 @@ class EnvRandomReturn(gym.Env):
             baseMass=cube_mass,
             baseCollisionShapeIndex=col_shape_id,
             basePosition=[
-                random.uniform(-7, 7),
-                random.uniform(-7, 7),
+                random.uniform(-3, 3),
+                random.uniform(-3, 3),
                 random.uniform(0.25, 1.5)
                 ]
         )
@@ -88,8 +88,8 @@ class EnvRandomReturn(gym.Env):
             baseMass=cube_mass,
             baseCollisionShapeIndex=col_shape_id,
             basePosition=[
-                random.uniform(-7, 7),
-                random.uniform(8, 19),
+                random.uniform(-3, 3),
+                random.uniform(5, 10),
                 random.uniform(0.25, 1.5)
                 ]
         )
@@ -107,17 +107,17 @@ class EnvRandomReturn(gym.Env):
 
         # Define actions
         if action == 0: # Up
-            z_scaler = 20.5
+            z_scaler = 200.5
         elif action == 1: # Right
-            x_scaler = 20.5
+            x_scaler = 200.5
         elif action == 2: # Down
-            z_scaler = -10.5
+            z_scaler = -101.5
         elif action == 3: # Left
-            x_scaler = -20.5
+            x_scaler = -200.5
         elif action == 4: # Forward
-            y_scaler = 20.5
+            y_scaler = 200.5
         elif action == 5: # Backward
-            y_scaler = -20.5
+            y_scaler = -200.5
         else:
             raise ValueError(f"Action not in range(6) '{action}'")
 
@@ -218,7 +218,12 @@ class EnvRandomReturn(gym.Env):
     def step_simulation(self, steps=1000):
         """ Run the simulation for a given number of steps while stabilizing the drone. """
         for _ in range(steps):
-            self.step(5)
+            self.step(4)
+            time.sleep(1)
+
+    def close(self):
+        print("closed")
+        p.disconnect()
 
 if __name__ == "__main__":
     env = EnvRandomReturn()

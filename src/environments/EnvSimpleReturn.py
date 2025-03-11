@@ -101,17 +101,17 @@ class EnvSimpleReturn(gym.Env):
 
         # Define actions
         if action == 0: # Up
-            z_scaler = 20.5
+            z_scaler = 1000.5
         elif action == 1: # Right
-            x_scaler = 20.5
+            x_scaler = 1000.5
         elif action == 2: # Down
-            z_scaler = -10.5
+            z_scaler = -1000.5
         elif action == 3: # Left
-            x_scaler = -20.5
+            x_scaler = -1000.5
         elif action == 4: # Forward
-            y_scaler = 20.5
+            y_scaler = 1000.5
         elif action == 5: # Backward
-            y_scaler = -20.5
+            y_scaler = -1000.5
         else:
             raise ValueError(f"Action not in range(6) '{action}'")
 
@@ -173,16 +173,6 @@ class EnvSimpleReturn(gym.Env):
             reward -= 200
             done = True
             truncated = True
-        # #Reward for getting closer
-        # prev_distance = self.previous_distance
-        # if distance < prev_distance:
-        #     # reward += abs(distance) ** 2
-        #     reward += 1
-        # else:
-        #     # reward -= abs(distance) ** 2
-        #     reward -= 1
-
-        # self.previous_distance = distance
 
         # Reward for reaching b
         if distance < 1:
@@ -213,7 +203,9 @@ class EnvSimpleReturn(gym.Env):
     def step_simulation(self, steps=1000):
         """ Run the simulation for a given number of steps while stabilizing the drone. """
         for _ in range(steps):
-            self.step(5)
+            self.step(4)
+            time.sleep(10)
 
 if __name__ == "__main__":
     env = EnvSimpleReturn()
+    env.step_simulation()
