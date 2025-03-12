@@ -166,7 +166,7 @@ class EnvSimpleReturn(gym.Env):
             truncated = True
 
         # **Hard penalty if drone moves too far away (out of bounds)**
-        if distance > self.standard_dist:
+        if distance > self.standard_dist * 2:
             reward -= 200
             done = True
             truncated = True
