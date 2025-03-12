@@ -2,6 +2,7 @@ from stable_baselines3 import PPO
 from stable_baselines3 import DQN
 from environments.EnvSimpleLine import EnvSimpleLine
 from environments.EnvSimpleReturn import EnvSimpleReturn
+from environments.EnvRandomReturn import EnvRandomReturn
 from stable_baselines3.common.env_util import make_vec_env
 
 
@@ -65,7 +66,7 @@ class DQN_Algorithm:
                 exploration_initial_eps=1.0,
                 exploration_final_eps=0.02,
                 train_freq=4,
-                batch_size=32,
+                batch_size=64,
                 verbose=0,  # Optional: Set to 1 for logging output
                 tensorboard_log="./models/dqn_logs/"
             )
@@ -80,7 +81,7 @@ class DQN_Algorithm:
                 exploration_initial_eps=1.0,
                 exploration_final_eps=0.02,
                 train_freq=4,
-                batch_size=32,
+                batch_size=64,
                 verbose=0,
                 tensorboard_log="./models/dqn_logs/"
             )
@@ -100,12 +101,11 @@ class DQN_Algorithm:
 
 
 if __name__ == "__main__":
-    algorithm = PPO_Algorithm(
+    algorithm = DQN_Algorithm(
         env=EnvSimpleReturn,
-        model="models/PPO_EnvSimpleReturn_2M-v2",
-        timesteps=2_000_000
+        timesteps=200_000
         )
-    algorithm.train(model_name="EnvSimpleReturn_4M")
+    algorithm.train(model_name="EnvSimpleReturn_200k")
     #algorithm.test(epochs=10)
 
     # algorithm = DQN_Algorithm(

@@ -21,7 +21,7 @@ class EnvSimpleReturn(gym.Env):
 
         # Load objects
         self.plane_id = p.loadURDF("plane.urdf", globalScaling=10)
-        self.drone_id = p.loadURDF("res/drone.urdf", basePosition=[0, 1, 0.8])
+        self.drone_id = p.loadURDF("C:/Git_Repos/Drone-DeepRL/res/drone.urdf", basePosition=[0, 1, 0.8])
         self.drone_initial_pos, self.drone_initial_ori = p.getBasePositionAndOrientation(self.drone_id)
 
         # Target positions of the cubes to calculate distance between drone and cube
@@ -45,20 +45,13 @@ class EnvSimpleReturn(gym.Env):
 
         # Action space
         self.action_space = gym.spaces.Discrete(6) # Up, Down, Left, Right, Forward, Backward
-        # No distance in observation space yet
-        # self.observation_space = gym.spaces.Box(
-        #     low=np.array([0, 0, 0]), 
-        #     high=np.array([100, 100, 10]), 
-        #     dtype=np.float32
-        #     )
         self.observation_space = gym.spaces.Box(
-            low=np.array([-100, -100, 0, -100]),            # x, y, z, distance (all set to 0 initially)
-            high=np.array([100, 100, 10, 100]),    # x, y, z, max distance to target
+            low=np.array([-100, -100, 0.2, 0, 0]),
+            high=np.array([100, 100, 10, 50, 1]),
             dtype=np.float32
         )
 
         # Reward
-        # self.previous_distance = abs(self.target_a[1] - self.target_b[1])
         self.previous_distance = math.sqrt(
             (self.target_a[0] - self.target_b[0]) ** 2 +  # X difference squared
             (self.target_a[1] - self.target_b[1]) ** 2 +  # Y difference squared
@@ -101,17 +94,17 @@ class EnvSimpleReturn(gym.Env):
 
         # Define actions
         if action == 0: # Up
-            z_scaler = 1000.5
+            z_scaler = 200.5
         elif action == 1: # Right
-            x_scaler = 1000.5
+            x_scaler = 200.5
         elif action == 2: # Down
-            z_scaler = -1000.5
+            z_scaler = -101.5
         elif action == 3: # Left
-            x_scaler = -1000.5
+            x_scaler = -200.5
         elif action == 4: # Forward
-            y_scaler = 1000.5
+            y_scaler = 200.5
         elif action == 5: # Backward
-            y_scaler = -1000.5
+            y_scaler = -200.5
         else:
             raise ValueError(f"Action not in range(6) '{action}'")
 
@@ -153,43 +146,47 @@ class EnvSimpleReturn(gym.Env):
         truncated = False
         terminated = False
 
-        # Get current position and distance
+        # Get drone position and calculate distance to the current target
         pos, _ = p.getBasePositionAndOrientation(self.drone_id)
         distance = np.linalg.norm(np.array(pos) - self.current_target)
 
-        # Out of range 
-        if distance > self.standard_dist:
-            reward-=200
-            done=True
-            truncated=True
-        # Reward for getting closer to the target (shaped reward)
-        prev_distance = self.previous_distance
-        reward += (prev_distance - distance) * 5  # Scale factor to emphasize reward
+        # Normalize distance (scale between 0 and 1)
+        distance_norm = distance / self.standard_dist  # 1 = farthest, 0 = reached target
 
-        self.previous_distance = distance
+        # **Shaped reward: Reward for moving closer (using normalized distance)**
+        reward += (self.previous_distance - distance) * 10  # Difference in distance
 
-        # Crash penalties
-        if pos[2] > 2 or pos[2] < 0.2:  # too high or too low
+        # **Extra penalty for being farther away** (scaled with normalized distance)
+        reward -= distance_norm * 50  # Larger penalty when far
+
+        # **Crash Penalties (too high or too low)**
+        if pos[2] > 2 or pos[2] < 0.2:  
             reward -= 200
             done = True
             truncated = True
 
-        # Reward for reaching b
+        # **Hard penalty if drone moves too far away (out of bounds)**
+        if distance > self.standard_dist:
+            reward -= 200
+            done = True
+            truncated = True
+
+        # **Reward for reaching the target**
         if distance < 1:
-            if self.reached_target_b is True:
-                # Reward for reaching b and then return to a
+            if self.reached_target_b:
                 print("DONE!")
-                reward += 200
+                reward += 300  # Final goal reached
                 done = True
                 terminated = True
             else:
-                # Reward for reaching a
                 print("Reached target B")
                 self.reached_target_b = True
                 self.current_target = self.target_a
                 reward += self.reward_target_b
-                self.reward_target_b = 0
-            
+                self.reward_target_b = 0  # Prevent repeated rewards
+
+        # **Update previous distance for the next step**
+        self.previous_distance = distance
         return reward, done, terminated, truncated
 
     def get_observation(self):
@@ -197,7 +194,8 @@ class EnvSimpleReturn(gym.Env):
 
         # Include distance to target into obeservation
         distance = np.linalg.norm(np.array(pos) - self.current_target)
-        return np.array([pos[0], pos[1], pos[2], distance], dtype=np.float32)
+        drone_id = 0 if self.current_target == self.target_b else 1
+        return np.array([pos[0], pos[1], pos[2], distance, drone_id], dtype=np.float32)
 
     # Only for debugging
     def step_simulation(self, steps=1000):
