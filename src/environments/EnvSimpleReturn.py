@@ -194,6 +194,7 @@ class EnvSimpleReturn(gym.Env):
 
         # Include distance to target into obeservation
         distance = np.linalg.norm(np.array(pos) - self.current_target)
+        # TODO: not drone id -> object id
         drone_id = 0 if self.current_target == self.target_b else 1
         return np.array([pos[0], pos[1], pos[2], distance, drone_id], dtype=np.float32)
 
