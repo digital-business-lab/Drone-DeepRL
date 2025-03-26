@@ -1,4 +1,6 @@
 # Drone-DeepRL
+The project goal is that we can automatically fly a drone from the starting point A to the goal point B. On B the drone should pickup some kind of object and fly it back to the starting point. To achive this the main idea is to make a RL algorithm to fly the drone. Because of inefficiency of learning in the real world we create environments via pybullet so the algorithm learns to avoid objects, fly to the desired points and make it quick. After that we can run the algorithm on the drone and test it in real life.
+
 
 ### Environment
 ---
